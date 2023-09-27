@@ -1,12 +1,11 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from rest_framework import generics,permissions,status,viewsets
-from rest_framework.permissions import AllowAny
 
 from .models import Group, Message
-from .serializers import MessageSerializer,UserRegistrationSerializer,ChatGroupSerializer,MemberSerializer,ChatGroupDetailSerializer,UserEditSerializer
+from .serializers import MessageSerializer,UserRegistrationSerializer,ChatGroupSerializer,MemberSerializer,ChatGroupDetailSerializer,UserEditSerializer,UserDetailSerializer
 
-from rest_framework import serializers
+from rest_framework import generics,permissions,status,viewsets,pagination,serializers
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -27,19 +26,21 @@ class CreateOrGetGroupView(viewsets.ModelViewSet):
         if self.action == 'list' and group_id is None:
             return ChatGroupSerializer
         
-        group_id = get_object_or_404(Group.objects,deleted=False,id=group_id)
         if group_id:
             return ChatGroupDetailSerializer
         return ChatGroupSerializer
 
     def get_queryset(self):   
         group_id = self.kwargs.get('group_id',None)
+        sender = self.request.user
         if group_id:
-            return [get_object_or_404(Group.objects,deleted=False,id=group_id)]
-        return Group.objects.filter(deleted=False)
+            group = get_object_or_404(Group.objects,deleted=False,id=group_id)
+            all_members = group.members.all()
+            if sender in all_members:
+                return [group]
+        return Group.objects.filter(deleted=False,members=sender)
     
     def perform_create(self, serializer):
-       
         # Add the owner creating the group as a member 
         serializer.save(members=[self.request.user],owner=self.request.user)
 
@@ -62,9 +63,12 @@ class SendRecieveMessageView(generics.ListCreateAPIView):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
+    # pagination_class = pagination.LimitOffsetPagination
+    # page_size = 50  # Adjust this value to control the number of records per page
 
     def perform_create(self, serializer):
-        group_id = self.request.data.get('group')
+        # group_id = self.request.data.get('group')
+        group_id = self.kwargs.get('group_id',None)
         content = self.request.data.get('content',None)
         sender = self.request.user
         group = get_object_or_404(Group.objects,deleted=False,id=group_id)
@@ -73,7 +77,7 @@ class SendRecieveMessageView(generics.ListCreateAPIView):
             raise serializers.ValidationError({'message': F"You are not allowed to send text on this group."})
         if len(content) == 0:
             raise serializers.ValidationError({'message': F"Empty message are not allowed."})
-        serializer.save(sender=sender,content=content,group=group)
+        serializer.save(sender=sender,group=group)
 
     def get_queryset(self):
         group_id = self.kwargs.get('group_id')
@@ -144,7 +148,7 @@ class JoinGroupView(generics.UpdateAPIView):
         if user not in all_members:
             group.members.add(user)
             return Response({'message': F"User added to {group}."})
-        return Response({'message': F"User already a member of {'group'}."},status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': F"User already a member of {'group'}."},status=status.HTTP_403_FORBIDDEN)
 
 # If user Wantes to leave a group
 #TODO: if admin wants to leave a group then what to do ?
@@ -158,7 +162,6 @@ class LeaveRemoveGroupView(generics.UpdateAPIView):
         user = get_object_or_404(User.objects, id=user_id)
         group = get_object_or_404(Group.objects,deleted=False,id=group_id)
         all_members = group.members.all()
-        
         if self.request.user == group.owner and self.request.user == user:
             return Response({'message': "Action not possible you're the group owner."},status=status.HTTP_403_FORBIDDEN)
         if self.request.user != group.owner and self.request.user != user:
@@ -199,15 +202,26 @@ class UserEditView(generics.RetrieveUpdateAPIView):
 # Auth Token generation  
 class AuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data,context={'request': request})
+        user_info = request.data
+        serializer = self.serializer_class(data=user_info,context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
+        print(user)
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key})
+        serializer = UserDetailSerializer({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'token': "Token "+token.key, 
+        })
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     def post(self, request):
         token = Token.objects.get(user=request.user)
-        token.delete()
-        return Response({'message': "You've been logged out"},status=status.HTTP_200_OK)
+        if token:
+            token.delete()
+            return Response({'message': "You've been logged out"},status=status.HTTP_200_OK)

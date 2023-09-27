@@ -17,11 +17,25 @@ class ChatGroupDetailSerializer(serializers.ModelSerializer):
         model = Group
         fields = ['name','id','members']
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'first_name', 'last_name']
+
 class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)  # Make sender read-only
+    group = serializers.PrimaryKeyRelatedField(read_only=True)  # Making group read-only
+
     class Meta:
         model = Message
         fields = ['group', 'content', 'timestamp','sender','id','likes']
         ordering = ['-timestamp']
+     
+        def create(self, validated_data):
+            sender = self.context['request'].user
+            validated_data['sender'] = sender
+            message = Message.objects.create(**validated_data)
+            return message
 
 #this also handles the creation sent by the view
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -46,3 +60,12 @@ class UserEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name']
+
+#this is for the login + user token back
+class UserDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    token = serializers.CharField()

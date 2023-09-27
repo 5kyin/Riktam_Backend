@@ -24,13 +24,16 @@ SECRET_KEY = 'django-insecure-060_*-p!9_nkw+&d+fmj0)p2u_$t80j#k-)diq4c%&(=(u%+*f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["localhost"]
+# CORS_ALLOWED_ORIGINS=["http://localhost:8000"]
+#DO NOT PUT THIS IN PROD
+CORS_ALLOW_ALL_ORIGINS =True
 
 # Application definition
 
 INSTALLED_APPS = [
     'channels',
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,10 +44,15 @@ INSTALLED_APPS = [
     'rest_framework',    
     'rest_framework.authtoken',
     
+    "corsheaders",
+    
     'chatting',
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -85,7 +93,7 @@ CHANNEL_LAYERS = {
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 50,
     'DEFAULT_AUTHENTICATION_CLASSES': [
                 'rest_framework.authentication.TokenAuthentication',
     ]
