@@ -99,8 +99,11 @@ class LikeMessageView(generics.UpdateAPIView):
         user = self.request.user
         if user not in group.members.all():
             return Response({'message': "You cannot like a messege you're not a part of."}, status=status.HTTP_403_FORBIDDEN)
+        if user in message.likes.all():
+            message.likes.remove(user)
+            return Response({'message': "Unliked Message"}) 
         message.likes.add(user)
-        return Response({'message': F"Liked message"})
+        return Response({'message': F"Liked Message"})
         # serializer.save(likes=[self.request.user])
 
 class DeleteGroupView(viewsets.ModelViewSet):

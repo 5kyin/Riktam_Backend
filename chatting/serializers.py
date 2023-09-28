@@ -15,7 +15,7 @@ class ChatGroupSerializer(serializers.ModelSerializer):
 class ChatGroupDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
-        fields = ['name','id','members']
+        fields = ['name','id','members','owner']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
