@@ -24,16 +24,20 @@ SECRET_KEY = 'django-insecure-060_*-p!9_nkw+&d+fmj0)p2u_$t80j#k-)diq4c%&(=(u%+*f
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = ["localhost","127.0.0.1"]
 # CORS_ALLOWED_ORIGINS=["http://localhost:8000"]
 #DO NOT PUT THIS IN PROD
 CORS_ALLOW_ALL_ORIGINS =True
 
 # Application definition
 
+WSGI_APPLICATION = 'ChatApp.wsgi.application'
+#Handle the ASGI
+ASGI_APPLICATION = 'ChatApp.asgi.application'
+
 INSTALLED_APPS = [
+    "daphne",
     'channels',
-    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,15 +48,16 @@ INSTALLED_APPS = [
     'rest_framework',    
     'rest_framework.authtoken',
     
+    
     "corsheaders",
     
     'chatting',
 ]
 
 MIDDLEWARE = [
+    
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -80,11 +85,6 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'ChatApp.wsgi.application'
-
-#Handle the ASGI
-ASGI_APPLICATION = "ChatApp.routing.application" 
-
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': "channels.layers.InMemoryChannelLayer"
@@ -103,9 +103,13 @@ REST_FRAMEWORK = {
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": "mothership",
+        "USER": "mothership",
+        "PASSWORD": "",
+        "HOST": "localhost",
+        "PORT": "5432",
     }
 }
 

@@ -86,7 +86,7 @@ class SendRecieveMessageView(generics.ListCreateAPIView):
         if self.request.user not in all_members:
             # return Response({'message': F"You are not a participant of this group."},status=status.HTTP_403_FORBIDDEN)
             return []
-        return Message.objects.filter(group_id=group_id)
+        return Message.objects.filter(id=1)
 
 class LikeMessageView(generics.UpdateAPIView):
     queryset = Message.objects.all()
